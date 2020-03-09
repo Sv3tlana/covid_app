@@ -199,9 +199,9 @@ def distribute_interventions( t ):
     """
     if t == close_schools_timestep:
         print( "SCHOOL CLOSURE INTERVENTION" )
-        FROM_CHILD_TO_CHILD = 0 # 0.25
-        FROM_CHILD_TO_ADULT = 0 # 0.75
-        FROM_ADULT_TO_CHILD = 0 # 0.75
+        FROM_CHILD_TO_CHILD = 0.25
+        FROM_CHILD_TO_ADULT = 0.75
+        FROM_ADULT_TO_CHILD = 0.75
         #FROM_ADULT_TO_ADULT = 0
         global factors
         factors = [[FROM_CHILD_TO_CHILD, FROM_ADULT_TO_CHILD],
