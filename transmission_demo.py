@@ -42,6 +42,8 @@ sim_duration = 100 # 180
 CHILD = 0
 ADULT = 1
 contagion_buckets = [0, 0]
+#contagion_bucket_homog = 0
+
 close_schools_timestep = 54
 
 #FROM_CHILD_TO_CHILD = 0.25
@@ -126,9 +128,11 @@ def expose_callback( action, prob, individual_id ):
             pdb.set_trace()
 
         global contagion_buckets 
+        #global contagion_bucket_homog
 
         #print( "Exposing individual {0} to contagion {1}.".format( individual_id, contagion_bucket ) )
 
+        #HINT-y code here
         contagion = contagion_buckets[CHILD] + contagion_buckets[ADULT]
 
         me = ADULT if gi.get_age(individual_id) >= 7300 else CHILD
@@ -137,8 +141,11 @@ def expose_callback( action, prob, individual_id ):
         my_factor_from_adult = factors[me][ADULT]
 
         contagion = (contagion_buckets[CHILD] * my_factor_from_child) + (contagion_buckets[ADULT] * my_factor_from_adult)
-        #print( "I am an {}, exposed to contagion {}.".format( "CHILD" if me == CHILD else "ADULT", contagion ) )
         contagion /= len(human_pop)
+        #print( "HINT-y math: I am an {}, exposed to contagion {}.".format( "CHILD" if me == CHILD else "ADULT", contagion ) )
+        #contagion = contagion_bucket_homog
+        
+
         if gi.should_infect( ( individual_id, contagion ) ):
             return 1
 
@@ -161,10 +168,11 @@ def deposit_callback( contagion, individual_id ):
     #print( "Shedding {0} into age-clan index {1}.".format( contagion, index ) )
     #age_of_infection = gi.get_infection_age( individual_id )
     #contagion = get_infectiousness( age_of_infection )
-    global contagion_buckets 
+    global contagion_buckets
+    #global contagion_bucket_homog
     bucket_index = ADULT if gi.get_age(individual_id) >= 7300 else CHILD
     contagion_buckets[bucket_index] += contagion
-    #contagion_buckets[0] += contagion
+    #contagion_bucket_homog += contagion
 
 def publish_callback( human_id, event_id ):
     pass
@@ -267,18 +275,20 @@ def run( from_script = False ):
 
     graveyard = []
     global timestep
-    global contagion_buckets 
+    global contagion_buckets
+    #global contagion_bucket_homog 
     for t in range(0,sim_duration): # for one year
         timestep = t
 
         do_shedding_update( human_pop )
-        # contagion_bucket /= len(human_pop)
+        #contagion_bucket_homog /= len(human_pop)
         do_vitaldynamics_update( human_pop, graveyard ) 
         distribute_interventions( t )
 
         #report_channels[ "Infected" ].append( prevalence[-1] )
         print( "At end of timestep {0} num_infected = {1} stat_pop = {2}, disease deaths = {3}.".format( t, prevalence[-1], len(human_pop), len(graveyard) ) )
         contagion_buckets = [0, 0]
+        #contagion_bucket_homog = 0
 
     # Sim done: Report.
     plt.plot( susceptible, color='green', label='S' )
