@@ -9,7 +9,7 @@ import timeit
 from dtk_pymod_core import *
 import dtk_nodedemog as nd
 import dtk_generic_intrahost as gi
-#import dtk_vaccine_intervention as vi
+import dtk_vaccine_intervention as vi
 import matplotlib.pyplot as plt
 
 # Future report structures...
@@ -34,7 +34,7 @@ timestep = 0
 random.seed( 445 ) # I like the number 4
 
 # constants/parameters
-vaccine_disribution_timestep = 200000
+vaccine_disribution_timestep = 2
 outbreak_timesteps = [ 1 ]
 outbreak_coverage = 0.002
 #sim_duration = 55 # 180
@@ -225,12 +225,15 @@ def distribute_interventions( t ):
             #tdi.distribute( individual_ptr )
 
             # Below is code to giveout ART via function that resets ART timers
-            give_art( hum_id )
+            #give_art( hum_id )
 
             #Below is code to give out vaccines; this should be updated to use the distribute method
             #print( "Giving simple vaccine to {0}.".format( hum_id ) )
             #vaccine = vi.get_intervention()
             #gi.give_intervention( ( hum_id, vaccine ) )
+            if gi.get_age( hum_id ) < 70*365:
+                vi.distribute( gi.get_individual_for_iv( hum_id ) )
+
 
     # For trivial demo, remove ART after two years.
     elif t == vaccine_disribution_timestep+730:
