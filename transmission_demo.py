@@ -95,7 +95,7 @@ def create_person_callback( mcw, age, gender ):
 
 # INTERESTING TRANSMISSION CODE STARTS HERE
 
-def expose_callback( action, prob, individual_id ):
+def expose_callback( individual_id ):
     """
     This function is the callback for exposure. It is registered with the intrahost module
     and then called for each individual for each timestep. This is where you decide whether 
@@ -194,7 +194,7 @@ def get_infectiousness( age_of_infection ):
     elif age_of_infection >= 30 and age_of_infection < 60:
         inf = 0.1 * (60-age_of_infection)/30.
     #print( "inf = {0}.".format( inf ) )
-    return inf;
+    return inf
 
 # 
 # INTERVENTION HELPERS
@@ -279,30 +279,32 @@ def run( from_script = False ):
     graveyard = []
     global timestep
     global contagion_buckets
+    dis_death_cum = 0
     #global contagion_bucket_homog 
     for t in range(0,sim_duration): # for one year
         timestep = t
 
-        do_shedding_update( human_pop )
+        stat_pop = do_shedding_update( human_pop )
         #contagion_bucket_homog /= len(human_pop)
-        do_vitaldynamics_update( human_pop, graveyard ) 
+        do_vitaldynamics_update( human_pop, graveyard, contagion_buckets ) 
         distribute_interventions( t )
 
-        #report_channels[ "Infected" ].append( prevalence[-1] )
-        print( "At end of timestep {0} num_infected = {1} stat_pop = {2}, disease deaths = {3}.".format( t, prevalence[-1], len(human_pop), len(graveyard) ) )
+        dis_death_cum += disdeaths[-1]
+        print( f"At end of timestep {t} num_infected = {prevalence[-1]} stat_pop = {stat_pop}, disease deaths = {dis_death_cum}." )
         contagion_buckets = [0, 0]
         #contagion_bucket_homog = 0
 
     # Sim done: Report.
+    # save prevalence with tag and timestamp
+    tag = (sys.argv[1] + "_") if len( sys.argv ) > 1 else ""  # secret tag option
+    save_output( tag )
+
     plt.plot( susceptible, color='green', label='S' )
     plt.plot( exposeds, color='purple', label='E' )
     plt.plot( prevalence, color='orange', label='I' )
     plt.plot( recovered, color='blue', label='R' )
     plt.plot( disdeaths, color='red', label='D' )
-    #plt.title( "Infections" )
-    #plt.plot( report_channels[ "Infected" ], color='orange' )
     plt.xlabel( "time" )
-    #plt.ylabel( "infected individuals" )
     plt.legend()
     plt.show()
 
@@ -311,20 +313,7 @@ def run( from_script = False ):
         print( "GRAVEYARD\n" + json.dumps( graveyard, indent=4  ) )
     return graveyard
 
-def perf_bench():
-    sillypop = []
-    for _ in range(1000):
-        sillypop.append( gi.create( ( 1, 1.0, 1.0 ) ) )
-    start_time = timeit.default_timer()
-    for t in range(7300):
-        for human in sillypop:
-            gi.update( human )
-    elapsed = timeit.default_timer() - start_time
-    print( str( elapsed ) )
-    #for human in sillypop:
-    #    print( gi.get_age( human ) )
 
 if __name__ == "__main__": 
-    #test_cart_prod()
     run()
-    #perf_bench()
+    

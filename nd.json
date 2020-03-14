@@ -5,7 +5,7 @@
     "Population_Scale_Type": "FIXED_SCALING", 
     "x_Base_Population": 4.24, 
     "Individual_Sampling_Type": "FIXED_SAMPLING", 
-    "Base_Individual_Sample_Rate": 1,
+    "Base_Individual_Sample_Rate": 1.0,
     "Base_Year": 2015,
     "Enable_Vital_Dynamics": 0, 
 
