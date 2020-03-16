@@ -4,27 +4,21 @@ import sys
 import json
 import random
 import pdb
-import timeit
 
-from dtk_pymod_core import *
+import matplotlib.pyplot as plt
+
 import dtk_nodedemog as nd
 import dtk_generic_intrahost as gi
 import dtk_vaccine_intervention as vi
-import matplotlib.pyplot as plt
 
-# Future report structures...
-report_channels = {}
-report_channels[ "Susceptible" ] = []
-report_channels[ "Infected" ] = []
-report_channels[ "Recovered" ] = []
+from dtk_pymod_core import *
 
 """
-In this app, we want to demonstrate how fertility and mortality are configured in the DTK code.
-We will start with a population of 10k (?) of uniform age. We'll let the user set the fertility 
-and morality params, or walk them through the options. We will run for 1 year when they hit 'submit' 
-and report back the births and/or deaths.
-For births, we'll record the time of each birth and render that in a monthly bar chart on its side.
-For deaths, we'll do the same, but render the age (and gender?) in a monthly bar chart.
+In this app, we use the compiled C++ DTK (EMOD) python modules (dtk_*) and demonstrate them being 
+used to create a synthetic population, seed an infection, and provide the transmission layer. 
+
+We also use a adult-child structured transmission which enables "social distance" interventions
+to be introduced.
 """
 
 # Initialize module variables.
@@ -37,14 +31,13 @@ random.seed( 445 ) # I like the number 4
 vaccine_disribution_timestep = 2
 outbreak_timesteps = [ 1 ]
 outbreak_coverage = 0.002
-#sim_duration = 55 # 180
-sim_duration = 100 # 180
+sim_duration = 180
 CHILD = 0
 ADULT = 1
+close_schools_timestep = 54
+
 contagion_buckets = [0, 0]
 #contagion_bucket_homog = 0
-
-close_schools_timestep = 54
 
 #FROM_CHILD_TO_CHILD = 0.25
 #FROM_CHILD_TO_ADULT = 0.75
@@ -57,6 +50,8 @@ FROM_ADULT_TO_ADULT = 1.00
 factors = [[FROM_CHILD_TO_CHILD, FROM_ADULT_TO_CHILD],
            [FROM_CHILD_TO_ADULT, FROM_ADULT_TO_ADULT]]
 
+ADULT_CHILD_AGE_THRESHOLD=7300
+
 def create_person_callback( mcw, age, gender ):
     """
     This callback is required by dtk_nodedemographic during population initialization.
@@ -64,10 +59,10 @@ def create_person_callback( mcw, age, gender ):
     It takes 3 parameters: monte-carlo weight, age, and sex.
     """
     if random.random() <= 0.23:
-        age = random.randrange(0, 7300)
+        age = random.randrange(0, ADULT_CHILD_AGE_THRESHOLD)
     else:
-        age = random.randrange(7300, 36500)
-    # print("Creating {}.".format("ADULT" if age >= 7300 else "CHILD"))
+        age = random.randrange(ADULT_CHILD_AGE_THRESHOLD, 36500)
+    # print("Creating {}.".format("ADULT" if age >= ADULT_CHILD_AGE_THRESHOLD else "CHILD"))
     # TODO: move some of this to core.
     global human_pop # make sure Python knows to use module-level variable human_pop
     #global timestep
@@ -135,7 +130,7 @@ def expose_callback( individual_id ):
         #HINT-y code here
         contagion = contagion_buckets[CHILD] + contagion_buckets[ADULT]
 
-        me = ADULT if gi.get_age(individual_id) >= 7300 else CHILD
+        me = ADULT if gi.get_age(individual_id) >= ADULT_CHILD_AGE_THRESHOLD else CHILD
 
         my_factor_from_child = factors[me][CHILD]
         my_factor_from_adult = factors[me][ADULT]
@@ -170,11 +165,15 @@ def deposit_callback( contagion, individual_id ):
     #contagion = get_infectiousness( age_of_infection )
     global contagion_buckets
     #global contagion_bucket_homog
-    bucket_index = ADULT if gi.get_age(individual_id) >= 7300 else CHILD
+    bucket_index = ADULT if gi.get_age(individual_id) >= ADULT_CHILD_AGE_THRESHOLD else CHILD
     contagion_buckets[bucket_index] += contagion
     #contagion_bucket_homog += contagion
 
 def publish_callback( human_id, event_id ):
+    """
+    This function gets invoked by DTK module events but the plubming is currently disconnected
+    pending perf improvements.
+    """
     pass
     #print( "Broadcast event {} on {}.".format( event_id, human_id ) )
 
@@ -234,14 +233,6 @@ def distribute_interventions( t ):
             if gi.get_age( hum_id ) < 70*365:
                 vi.distribute( gi.get_individual_for_iv( hum_id ) )
 
-
-    # For trivial demo, remove ART after two years.
-    elif t == vaccine_disribution_timestep+730:
-        for human in human_pop:
-            hum_id = human["id"] 
-            remove_art( hum_id )
-
-
 def setup_callbacks():
     """
     The setup_callbacks function tells the PyMod modules which functions (callbacks or delegates)
@@ -299,6 +290,7 @@ def run( from_script = False ):
     tag = (sys.argv[1] + "_") if len( sys.argv ) > 1 else ""  # secret tag option
     save_output( tag )
 
+    # This could get moved to core but users might want to play with it.
     plt.plot( susceptible, color='green', label='S' )
     plt.plot( exposeds, color='purple', label='E' )
     plt.plot( prevalence, color='orange', label='I' )
